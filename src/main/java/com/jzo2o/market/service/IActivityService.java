@@ -20,5 +20,5 @@ import java.util.List;
  */
 public interface IActivityService extends IService<Activity> {
 
-
+    void saveActivity(ActivitySaveReqDTO activitySaveReqDTO);
 }
