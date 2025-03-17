@@ -77,4 +77,22 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
     private ICouponWriteOffService couponWriteOffService;
 
 
+    /**
+     * 查询领取记录
+     *
+     * @param couponOperationPageQueryReqDTO
+     * @return
+     */
+    @Override
+    public PageResult<CouponInfoResDTO> pageQueryCoupon(CouponOperationPageQueryReqDTO couponOperationPageQueryReqDTO) {
+        Page<Coupon> page = new Page<>(couponOperationPageQueryReqDTO.getPageNo(), couponOperationPageQueryReqDTO.getPageSize());
+        LambdaQueryWrapper<Coupon> wrapper = new LambdaQueryWrapper<Coupon>()
+            .eq(BeanUtils.isNotEmpty(couponOperationPageQueryReqDTO.getActivityId()), Coupon::getActivityId, couponOperationPageQueryReqDTO.getActivityId());
+        this.page(page, wrapper);
+        List<CouponInfoResDTO> collect = page.getRecords().stream().map(coupon -> BeanUtils.toBean(coupon, CouponInfoResDTO.class)).collect(Collectors.toList());
+        PageResult<CouponInfoResDTO> pageResult = new PageResult<>();
+        pageResult.setList(collect);
+        pageResult.setTotal(page.getTotal());
+        return pageResult;
+    }
 }

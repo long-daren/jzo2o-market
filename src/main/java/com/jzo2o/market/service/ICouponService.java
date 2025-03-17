@@ -23,6 +23,11 @@ import java.util.List;
  * @since 2023-09-16
  */
 public interface ICouponService extends IService<Coupon> {
-
+    /**
+     * 查询领取记录
+     * @param couponOperationPageQueryReqDTO
+     * @return
+     */
+    PageResult<CouponInfoResDTO> pageQueryCoupon(CouponOperationPageQueryReqDTO couponOperationPageQueryReqDTO);
 
 }
