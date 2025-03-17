@@ -21,4 +21,12 @@ import java.util.List;
 public interface IActivityService extends IService<Activity> {
 
     void saveActivity(ActivitySaveReqDTO activitySaveReqDTO);
+    PageResult<ActivityInfoResDTO> pageQueryActivity(ActivityQueryForPageReqDTO activityQueryForPageReqDTO);
+    /**
+     * 查询优惠券活动详情
+     * @param id
+     * @return
+     */
+    ActivityInfoResDTO getActivityDetail(Long id);
+
 }

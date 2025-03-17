@@ -1,6 +1,7 @@
 package com.jzo2o.market.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.jzo2o.common.expcetions.BadRequestException;
@@ -124,5 +125,42 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
         BeanUtil.copyProperties(activitySaveReqDTO, activity);
         owner.saveOrUpdate(activity);
 
+    }
+
+    @Override
+    public PageResult<ActivityInfoResDTO> pageQueryActivity(ActivityQueryForPageReqDTO activityQueryForPageReqDTO) {
+        Page<Activity> page=new Page<>(activityQueryForPageReqDTO.getPageNo(),activityQueryForPageReqDTO.getPageSize());
+        LambdaQueryWrapper<Activity> queryWrapper = Wrappers.<Activity>lambdaQuery()
+            .eq(ObjectUtils.isNotNull(activityQueryForPageReqDTO.getId()), Activity::getId, activityQueryForPageReqDTO.getId())
+            .eq(ObjectUtils.isNotNull(activityQueryForPageReqDTO.getType()), Activity::getType, activityQueryForPageReqDTO.getType())
+            .eq(ObjectUtils.isNotNull(activityQueryForPageReqDTO.getStatus()), Activity::getStatus, activityQueryForPageReqDTO.getStatus())
+            .like(ObjectUtils.isNotNull(activityQueryForPageReqDTO.getName()), Activity::getName, activityQueryForPageReqDTO.getName());
+        //查询
+        this.page(page,queryWrapper);
+        // 将查询结果转换为DTO列表
+        List<ActivityInfoResDTO> activityInfoResDTOList = page.getRecords().stream()
+            .map(activity ->BeanUtils.toBean(activity, ActivityInfoResDTO.class))
+            .collect(Collectors.toList());
+        PageResult pageResult = new PageResult();
+        pageResult.setTotal(page.getTotal());
+        pageResult.setList(activityInfoResDTOList);
+        //返回分页结果
+        return pageResult;
+    }
+
+    /**
+     * 查询优惠券活动详情
+     *
+     * @param id
+     * @return
+     */
+    @Override
+    public ActivityInfoResDTO getActivityDetail(Long id) {
+        Activity activity = getById(id);
+        if (activity == null) {
+            throw new BadRequestException("活动不存在");
+        }
+        ActivityInfoResDTO activityInfoResDTO = BeanUtils.toBean(activity, ActivityInfoResDTO.class);
+        return activityInfoResDTO;
     }
 }
