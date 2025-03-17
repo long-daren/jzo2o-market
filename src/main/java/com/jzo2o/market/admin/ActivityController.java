@@ -56,5 +56,12 @@ public class ActivityController {
         return activityService.getActivityDetail(id);
     }
 
+    @ApiOperation("撤销优惠券活动接口")
+    @PostMapping("/revoke/{id}")
+    public void revokeActivity(@PathVariable Long id) {
+        activityService.revokeActivity(id);
+    }
+
+
 
 }

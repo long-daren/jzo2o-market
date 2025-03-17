@@ -9,8 +9,10 @@ import com.jzo2o.common.model.PageResult;
 import com.jzo2o.common.utils.*;
 import com.jzo2o.market.constants.TabTypeConstants;
 import com.jzo2o.market.enums.ActivityStatusEnum;
+import com.jzo2o.market.enums.CouponStatusEnum;
 import com.jzo2o.market.mapper.ActivityMapper;
 import com.jzo2o.market.model.domain.Activity;
+import com.jzo2o.market.model.domain.Coupon;
 import com.jzo2o.market.model.dto.request.ActivityQueryForPageReqDTO;
 import com.jzo2o.market.model.dto.request.ActivitySaveReqDTO;
 import com.jzo2o.market.model.dto.response.ActivityInfoResDTO;
@@ -162,5 +164,26 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
         }
         ActivityInfoResDTO activityInfoResDTO = BeanUtils.toBean(activity, ActivityInfoResDTO.class);
         return activityInfoResDTO;
+    }
+
+    /**
+     * 撤销优惠券活动
+     *
+     * @param id
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void revokeActivity(Long id) {
+        Activity activity = getById(id);
+        if (activity == null) {
+            throw new BadRequestException("活动不存在");
+        }
+        //设置活动状态为作废
+        activity.setStatus(ActivityStatusEnum.VOIDED.getStatus());
+        //对应的优惠券状态更改为已失效
+        couponService.update(Wrappers.<Coupon>lambdaUpdate()
+            .eq(Coupon::getActivityId, id)
+            .set(Coupon::getStatus, CouponStatusEnum.INVALID));
+        return;
     }
 }
