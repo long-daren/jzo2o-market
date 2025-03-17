@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.jzo2o.common.model.PageResult;
 import com.jzo2o.market.model.dto.request.CouponOperationPageQueryReqDTO;
+import com.jzo2o.market.model.dto.request.MyCouponReqDTO;
 import com.jzo2o.market.model.dto.response.CouponInfoResDTO;
 import com.jzo2o.market.service.ICouponService;
 
@@ -29,4 +30,11 @@ public class CouponController {
     public PageResult<CouponInfoResDTO> pageQueryCoupon(CouponOperationPageQueryReqDTO couponOperationPageQueryReqDTO) {
         return couponService.pageQueryCoupon(couponOperationPageQueryReqDTO);
     }
+
+    @ApiOperation("我的优惠券列表接口")
+    @GetMapping("/my")
+    public CouponInfoResDTO myCoupon(MyCouponReqDTO myCouponReqDTO) {
+        return couponService.myCoupon(myCouponReqDTO);
+    }
+
 }

@@ -20,6 +20,7 @@ import com.jzo2o.market.model.domain.Activity;
 import com.jzo2o.market.model.domain.Coupon;
 import com.jzo2o.market.model.domain.CouponWriteOff;
 import com.jzo2o.market.model.dto.request.CouponOperationPageQueryReqDTO;
+import com.jzo2o.market.model.dto.request.MyCouponReqDTO;
 import com.jzo2o.market.model.dto.request.SeizeCouponReqDTO;
 import com.jzo2o.market.model.dto.response.ActivityInfoResDTO;
 import com.jzo2o.market.model.dto.response.CouponInfoResDTO;
@@ -94,5 +95,20 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
         pageResult.setList(collect);
         pageResult.setTotal(page.getTotal());
         return pageResult;
+    }
+
+    /**
+     * 领取优惠券
+     *
+     * @param myCouponReqDTO
+     */
+    @Override
+    public CouponInfoResDTO myCoupon(MyCouponReqDTO myCouponReqDTO) {
+        Long UserId= UserContext.currentUserId();
+        //查询用户领取的优惠券
+        Coupon coupon = this.getOne(new LambdaQueryWrapper<Coupon>()
+            .eq(Coupon::getUserId, UserId)
+            .eq(Coupon::getStatus, myCouponReqDTO.getStatus()));
+        return BeanUtils.toBean(coupon, CouponInfoResDTO.class);
     }
 }
