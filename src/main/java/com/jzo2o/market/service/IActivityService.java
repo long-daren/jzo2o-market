@@ -1,6 +1,7 @@
 package com.jzo2o.market.service;
 
 import com.jzo2o.common.model.PageResult;
+import com.jzo2o.market.enums.ActivityStatusEnum;
 import com.jzo2o.market.model.domain.Activity;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.jzo2o.market.model.dto.request.ActivityQueryForPageReqDTO;
@@ -35,4 +36,5 @@ public interface IActivityService extends IService<Activity> {
     void revokeActivity(Long id);
 
 
+    List<Activity> queryWithStatus(ActivityStatusEnum activityStatusEnum);
 }

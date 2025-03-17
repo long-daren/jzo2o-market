@@ -186,4 +186,10 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
             .set(Coupon::getStatus, CouponStatusEnum.INVALID));
         return;
     }
+
+    @Override
+    public List<Activity> queryWithStatus(ActivityStatusEnum activityStatusEnum) {
+        List<Activity> list = lambdaQuery().eq(Activity::getStatus, activityStatusEnum.getStatus()).list();
+        return list;
+    }
 }
