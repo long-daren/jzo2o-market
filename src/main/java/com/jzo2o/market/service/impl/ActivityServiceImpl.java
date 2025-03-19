@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.jzo2o.common.expcetions.BadRequestException;
 import com.jzo2o.common.model.PageResult;
 import com.jzo2o.common.utils.*;
+import com.jzo2o.market.constants.RedisConstants;
 import com.jzo2o.market.constants.TabTypeConstants;
 import com.jzo2o.market.enums.ActivityStatusEnum;
 import com.jzo2o.market.mapper.ActivityMapper;
@@ -151,6 +152,31 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
         // 2.未使用优惠券作废
         couponService.revoke(id);
 
+    }
+
+    /**
+     * 活动预热
+     */
+    @Override
+    public void preHeat() {
+        //当前时间
+        LocalDateTime now = DateUtils.now();
+
+        //查询进行中还未到结束的优惠券活动， 1个月内待开始的优惠券活动
+        /**
+         select *
+         from activity t
+         where t.distribute_start_time < date_add(now(), INTERVAL 30 day))  and t.status in(1,2)
+         order by t.distribute_start_time
+         */
+        List<Activity> list = lambdaQuery()
+            .le(Activity::getDistributeStartTime, now.plusDays(30))
+            .in(Activity::getStatus, Arrays.asList(DISTRIBUTING.getStatus(), NO_DISTRIBUTE.getStatus()))
+            .orderByAsc(Activity::getDistributeStartTime)
+            .list();
+        List<SeizeCouponInfoResDTO> seizeCouponInfoResDTOS = BeanUtils.copyToList(list, SeizeCouponInfoResDTO.class);
+        String jsonStr = JsonUtils.toJsonStr(seizeCouponInfoResDTOS);
+        redisTemplate.opsForValue().set(ACTIVITY_CACHE_LIST,jsonStr);
     }
 
 }

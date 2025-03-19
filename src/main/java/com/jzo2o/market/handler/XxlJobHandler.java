@@ -57,5 +57,19 @@ public class XxlJobHandler {
         }
     }
 
+    /**
+     * 活动预热，整点预热
+     *
+     */
+    @XxlJob("activityPreheat")
+    public void activityPreHeat() {
+        log.info("优惠券活动定时预热...");
+        try {
+            activityService.preHeat();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
 }
