@@ -28,6 +28,7 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -177,6 +178,58 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
         List<SeizeCouponInfoResDTO> seizeCouponInfoResDTOS = BeanUtils.copyToList(list, SeizeCouponInfoResDTO.class);
         String jsonStr = JsonUtils.toJsonStr(seizeCouponInfoResDTOS);
         redisTemplate.opsForValue().set(ACTIVITY_CACHE_LIST,jsonStr);
+        // 将待生效的活动库存写入redis
+        list.stream().filter(v->getStatus(v.getDistributeStartTime(),v.getDistributeEndTime(),v.getStatus())==1).forEach(v->{
+            redisTemplate.opsForHash().put(String.format(COUPON_RESOURCE_STOCK, v.getId() % 10), v.getId(), v.getTotalNum());
+        });
+        // 对于已生效的活动库存没有同步时再进行同步
+        list.stream().filter(v->getStatus(v.getDistributeStartTime(),v.getDistributeEndTime(),v.getStatus())==2).forEach(v->{
+            redisTemplate.opsForHash().putIfAbsent(String.format(COUPON_RESOURCE_STOCK, v.getId() % 10), v.getId(), v.getTotalNum());
+        });
     }
 
+    /**
+     * 用户端抢券列表分页查询活动信息
+     *
+     * @param tabType 页面类型
+     * @return
+     */
+    @Override
+    public List<SeizeCouponInfoResDTO> queryForListFromCache(Integer tabType) {
+        Object seizeCouponInfoStr  = redisTemplate.opsForValue().get(ACTIVITY_CACHE_LIST);
+        if(ObjectUtils.isNull(seizeCouponInfoStr)) {
+            return Collections.emptyList();
+        }
+        List<SeizeCouponInfoResDTO> list = JsonUtils.toList(seizeCouponInfoStr.toString(), SeizeCouponInfoResDTO.class);
+        //根据tabType确定要查询的状态
+        int queryStatus = tabType == TabTypeConstants.SEIZING ? DISTRIBUTING.getStatus() : NO_DISTRIBUTE.getStatus();
+        //过滤数据，并设置剩余数量、实际状态
+        List<SeizeCouponInfoResDTO> collect = list.stream().filter(item -> queryStatus == getStatus(item.getDistributeStartTime(), item.getDistributeEndTime(), item.getStatus()))
+            .peek(item -> {
+                item.setStatus(queryStatus);
+                item.setRemainNum(item.getStockNum());
+            }).collect(Collectors.toList());
+        return collect;
+    }
+
+    /**
+     * 获取状态，
+     * 用于xxl或其他定时任务在高性能要求下无法做到实时状态
+     *
+     * @return
+     */
+    private int getStatus(LocalDateTime distributeStartTime, LocalDateTime distributeEndTime, Integer status) {
+        if (NO_DISTRIBUTE.equals(status) &&
+            distributeStartTime.isBefore(DateUtils.now()) &&
+            distributeEndTime.isAfter(DateUtils.now())) {//待生效状态，实际活动已开始
+            return DISTRIBUTING.getStatus();
+        }else if(NO_DISTRIBUTE.equals(status) &&
+            distributeEndTime.isBefore(DateUtils.now())){//待生效状态，实际活动已结束
+            return LOSE_EFFICACY.getStatus();
+        }else if (DISTRIBUTING.equals(status) &&
+            distributeEndTime.isBefore(DateUtils.now())) {//进行中状态，实际活动已结束
+            return LOSE_EFFICACY.getStatus();
+        }
+        return status;
+    }
 }

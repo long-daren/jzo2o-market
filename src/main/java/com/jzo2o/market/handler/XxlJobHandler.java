@@ -34,7 +34,7 @@ public class XxlJobHandler {
      * 每分钟执行一次
      */
     @XxlJob("updateActivityStatus")
-    public void updateActivitySatus(){
+    public void updateActivityStatus(){
         log.info("定时修改活动状态...");
         try {
             activityService.updateStatus();
