@@ -156,4 +156,53 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
                 .le(Coupon::getValidityTime, DateUtils.now())
                 .update();
     }
+
+    /**
+     * 抢券
+     *
+     * @param seizeCouponReqDTO
+     */
+    @Override
+    public void seizeCoupon(SeizeCouponReqDTO seizeCouponReqDTO) {
+        ActivityInfoResDTO activityInfoByIdFromCache = activityService.getActivityInfoByIdFromCache(seizeCouponReqDTO.getId());
+        if (ObjectUtils.isNull(activityInfoByIdFromCache) || activityInfoByIdFromCache.getDistributeEndTime().isBefore(LocalDateTime.now())) {
+            throw new CommonException(SEIZE_COUPON_FAILD,"活动已结束");
+        }
+        if (activityInfoByIdFromCache.getDistributeStartTime().isAfter(LocalDateTime.now())) {
+            throw new CommonException(SEIZE_COUPON_FAILD,"活动未开始");
+        }
+        // 2.抢券准备
+//         key: 抢券同步队列，资源库存,抢券列表
+//         argv：抢券id,用户id
+        int index = (int) (seizeCouponReqDTO.getId() % 10);
+        // 同步队列redisKey
+        String couponSeizeSyncRedisKey = RedisSyncQueueUtils.getQueueRedisKey(COUPON_SEIZE_SYNC_QUEUE_NAME, index);
+        // 资源库存redisKey
+        String resourceStockRedisKey = String.format(COUPON_RESOURCE_STOCK, index);
+        // 抢券列表
+        String couponSeizeListRedisKey = String.format(COUPON_SEIZE_LIST, seizeCouponReqDTO.getId(), index);
+
+        log.debug("seize coupon keys -> couponSeizeListRedisKey->{},resourceStockRedisKey->{},couponSeizeListRedisKey->{},seizeCouponReqDTO.getId()->{},UserContext.currentUserId():{}",
+            couponSeizeListRedisKey, resourceStockRedisKey, couponSeizeListRedisKey, seizeCouponReqDTO.getId(), UserContext.currentUserId());
+        // 3.抢券结果
+        Object execute = redisTemplate.execute(seizeCouponScript, Arrays.asList(couponSeizeSyncRedisKey, resourceStockRedisKey, couponSeizeListRedisKey),
+            seizeCouponReqDTO.getId(), UserContext.currentUserId());
+        log.debug("seize coupon result : {}", execute);
+        // 4.处理lua脚本结果
+        // 4.处理lua脚本结果
+        if (execute == null) {
+            throw new CommonException(SEIZE_COUPON_FAILD, "抢券失败");
+        }
+        long result = NumberUtils.parseLong(execute.toString());
+        if (result > 0) {
+            return;
+        }
+        if (result == -1) {
+            throw new CommonException(SEIZE_COUPON_FAILD, "限领一张");
+        }
+        if (result == -2 || result == -4) {
+            throw new CommonException(SEIZE_COUPON_FAILD, "已抢光!");
+        }
+        throw new CommonException(SEIZE_COUPON_FAILD, "抢券失败");
+    }
 }

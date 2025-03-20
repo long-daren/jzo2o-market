@@ -19,6 +19,12 @@ import java.util.List;
  * @since 2023-09-16
  */
 public interface IActivityService extends IService<Activity> {
+    /**
+     * 从缓存中获取活动信息
+     * @param id
+     * @return
+     */
+    ActivityInfoResDTO getActivityInfoByIdFromCache(Long id);
 
     /**
      * 分页查询活动

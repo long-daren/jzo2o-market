@@ -56,6 +56,25 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
     @Resource
     private ICouponWriteOffService couponWriteOffService;
 
+    /**
+     * 从缓存中获取活动信息
+     *
+     * @param id
+     * @return
+     */
+    @Override
+    public ActivityInfoResDTO getActivityInfoByIdFromCache(Long id) {
+        Object activityList = redisTemplate.opsForValue().get(ACTIVITY_CACHE_LIST);
+        if (ObjectUtils.isNull(activityList)) {
+            return null;
+        }
+        List<ActivityInfoResDTO> list = JsonUtils.toList(activityList.toString(), ActivityInfoResDTO.class);
+        if (CollUtils.isEmpty(list)) {
+            return null;
+        }
+        return list.stream().filter(v -> v.getId().equals(id)).findFirst().orElse(null);
+    }
+
     @Override
     public PageResult<ActivityInfoResDTO> queryForPage(ActivityQueryForPageReqDTO activityQueryForPageReqDTO) {
         LocalDateTime now = DateUtils.now();
