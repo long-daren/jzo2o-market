@@ -71,4 +71,11 @@ public interface IActivityService extends IService<Activity> {
      * @return
      */
     List<SeizeCouponInfoResDTO> queryForListFromCache(Integer tabType);
+
+    /**
+     * 扣减库存
+     * @param id 活动id
+     *  如果扣减库存失败抛出异常
+     */
+    public void deductStock(Long id);
 }

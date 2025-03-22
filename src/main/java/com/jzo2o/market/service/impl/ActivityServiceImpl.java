@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.jzo2o.common.expcetions.BadRequestException;
+import com.jzo2o.common.expcetions.CommonException;
 import com.jzo2o.common.model.PageResult;
 import com.jzo2o.common.utils.*;
 import com.jzo2o.market.constants.RedisConstants;
@@ -229,6 +230,24 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
                 item.setRemainNum(item.getStockNum());
             }).collect(Collectors.toList());
         return collect;
+    }
+
+    /**
+     * 扣减库存
+     *
+     * @param id 活动id
+     *           如果扣减库存失败抛出异常
+     */
+    @Override
+    public void deductStock(Long id) {
+        boolean update = lambdaUpdate()
+            .setSql("stock_num = stock_num - 1")
+            .eq(Activity::getId, id)
+            .gt(Activity::getStockNum, 0)
+            .update();
+        if (!update) {
+            throw new CommonException("扣减优惠券库存失败，活动id:"+id);
+        }
     }
 
     /**

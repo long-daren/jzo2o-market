@@ -1,5 +1,8 @@
 package com.jzo2o.market.handler;
 
+import java.util.concurrent.ThreadPoolExecutor;
+
+import com.jzo2o.market.config.ThreadPoolConfiguration;
 import com.jzo2o.market.service.IActivityService;
 import com.jzo2o.market.service.ICouponService;
 import com.jzo2o.redis.annotations.Lock;
@@ -26,6 +29,9 @@ public class XxlJobHandler {
 
     @Resource
     private ICouponService couponService;
+
+    @Resource(name="syncThreadPool")
+    private ThreadPoolExecutor threadPoolExecutor;
 
     /**
      * 活动状态修改，
@@ -71,5 +77,12 @@ public class XxlJobHandler {
         }
     }
 
-
+    /**
+     * 抢券同步队列
+     * 10秒一次
+     */
+    @XxlJob("seizeCouponSyncJob")
+    public void seizeCouponSyncJob() {
+        syncManager.start(COUPON_SEIZE_SYNC_QUEUE_NAME, RedisSyncQueueConstants.STORAGE_TYPE_HASH, RedisSyncQueueConstants.MODE_SINGLE,threadPoolExecutor);
+    }
 }
