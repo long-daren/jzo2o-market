@@ -75,4 +75,10 @@ public interface ICouponService extends IService<Coupon> {
      * @return
      */
     List<AvailableCouponsResDTO> getAvailable(BigDecimal totalAmount);
+
+    /**
+     * 使用优惠券
+     * @param couponUseReqDTO
+     */
+    CouponUseResDTO use(CouponUseReqDTO couponUseReqDTO);
 }

@@ -228,7 +228,66 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
         List<AvailableCouponsResDTO> collect = coupons.stream().peek(coupon -> coupon.setDiscountAmount(CouponUtils.calDiscountAmount(coupon, totalAmount)))
             .filter(coupon -> coupon.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0 && coupon.getDiscountAmount().compareTo(totalAmount) < 0)
             .map(coupon -> BeanUtils.toBean(coupon, AvailableCouponsResDTO.class))
+            .sorted(Comparator.comparing(AvailableCouponsResDTO::getDiscountAmount).reversed())
             .collect(Collectors.toList());
         return collect;
+    }
+
+    /**
+     * 使用优惠券
+     *
+     * @param couponUseReqDTO
+     */
+    @Override
+    public CouponUseResDTO use(CouponUseReqDTO couponUseReqDTO) {
+        //判空
+        if (ObjectUtils.isNull(couponUseReqDTO.getOrdersId()) ||
+            ObjectUtils.isNull(couponUseReqDTO.getTotalAmount()))
+        {
+            throw new BadRequestException("优惠券核销的订单信息为空");
+        }
+        //用户id
+        Long userId = UserContext.currentUserId();
+        //查询优惠券信息
+        Coupon coupon = baseMapper.selectById(couponUseReqDTO.getId());
+        // 优惠券判空
+        if (coupon == null ) {
+            throw new BadRequestException("优惠券不存在");
+        }
+        if ( ObjectUtils.notEqual(coupon.getUserId(),userId)) {
+            throw new BadRequestException("只允许核销自己的优惠券");
+        }
+        //更新优惠券表的状态
+        boolean update = lambdaUpdate()
+            .eq(Coupon::getId, couponUseReqDTO.getId())
+            .eq(Coupon::getStatus, CouponStatusEnum.NO_USE.getStatus())
+            .gt(Coupon::getValidityTime, DateUtils.now())
+            .le(Coupon::getAmountCondition, couponUseReqDTO.getTotalAmount())
+            .set(Coupon::getOrdersId, couponUseReqDTO.getOrdersId())
+            .set(Coupon::getStatus, CouponStatusEnum.USED.getStatus())
+            .set(Coupon::getUseTime, DateUtils.now())
+            .update();
+        if (!update) {
+            throw new DBException("优惠券核销失败");
+        }
+        //添加核销记录
+        CouponWriteOff couponWriteOff = CouponWriteOff.builder()
+            .id(IdUtils.getSnowflakeNextId())
+            .couponId(couponUseReqDTO.getId())
+            .userId(userId)
+            .ordersId(couponUseReqDTO.getOrdersId())
+            .activityId(coupon.getActivityId())
+            .writeOffTime(DateUtils.now())
+            .writeOffManName(coupon.getUserName())
+            .writeOffManPhone(coupon.getUserPhone())
+            .build();
+        if(!couponWriteOffService.save(couponWriteOff)){
+            throw new DBException("优惠券核销失败");
+        }
+        // 计算优惠金额
+        BigDecimal discountAmount = CouponUtils.calDiscountAmount(coupon, couponUseReqDTO.getTotalAmount());
+        CouponUseResDTO couponUseResDTO = new CouponUseResDTO();
+        couponUseResDTO.setDiscountAmount(discountAmount);
+        return couponUseResDTO;
     }
 }
