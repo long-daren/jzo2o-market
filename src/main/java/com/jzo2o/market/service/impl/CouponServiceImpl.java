@@ -42,6 +42,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -204,5 +205,30 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
             throw new CommonException(SEIZE_COUPON_FAILD, "已抢光!");
         }
         throw new CommonException(SEIZE_COUPON_FAILD, "抢券失败");
+    }
+
+    /**
+     * 获取可用优惠券列表
+     *
+     * @param totalAmount
+     * @return
+     */
+    @Override
+    public List<AvailableCouponsResDTO> getAvailable(BigDecimal totalAmount) {
+        Long userId = UserContext.currentUserId();
+        List<Coupon> coupons = lambdaQuery()
+            .eq(Coupon::getUserId, userId)
+            .eq(Coupon::getStatus, CouponStatusEnum.NO_USE.getStatus())
+            .gt(Coupon::getValidityTime, DateUtils.now())
+            .le(Coupon::getAmountCondition, totalAmount)
+            .list();
+        if (CollUtils.isEmpty(coupons)) {
+            return Collections.emptyList();
+        }
+        List<AvailableCouponsResDTO> collect = coupons.stream().peek(coupon -> coupon.setDiscountAmount(CouponUtils.calDiscountAmount(coupon, totalAmount)))
+            .filter(coupon -> coupon.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0 && coupon.getDiscountAmount().compareTo(totalAmount) < 0)
+            .map(coupon -> BeanUtils.toBean(coupon, AvailableCouponsResDTO.class))
+            .collect(Collectors.toList());
+        return collect;
     }
 }
